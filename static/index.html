@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="clean">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ex Scientia Veritas — Sistema de Calibraciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ====================== APP ====================== -->
+<div id="app">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="logo.jpg" alt="ESV Logo" class="brand-logo">
+      <div class="brand-name">
+        <div class="b1">EX SCIENTIA <em>VERITAS</em></div>
+        <div class="b2">Laboratorio de Metrología · Sistema de Calibraciones</div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <span class="ind"></span>
+      <span>Sistema acreditado</span>
+      <span class="sep"></span>
+      <span id="catalogCount">0/50</span>
+      <span class="sep"></span>
+      <span>ISO/IEC 17025</span>
+    </div>
+
+    <div class="topbar-right">
+      <div class="notif-wrap" id="notifWrap">
+        <button class="topbar-btn" id="btnNotif" title="Notificaciones">
+          <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+        </button>
+        <div class="notif-panel" id="notifPanel">
+          <div class="np-head">
+            <span class="np-title">Notificaciones</span>
+            <button class="np-readall" id="btnReadAll">Marcar leídas</button>
+          </div>
+          <div class="np-list" id="notifList">
+            <div class="np-empty">Sin notificaciones</div>
+          </div>
+        </div>
+      </div>
+      <button class="topbar-btn" id="btnMsgs" title="Mensajes" style="position:relative"></button>
+      <button class="topbar-btn" id="btnMyOrders" title="Historial de órdenes"></button>
+      <button class="topbar-btn accent" id="btnNewOrder" title="Nueva orden de trabajo"></button>
+      <div class="role-pill" id="rolePillBtn" tabindex="0" title="Ver y editar mi perfil" style="cursor:pointer" aria-label="Mi perfil">
+        <div class="avatar" id="roleAvatar">??</div>
+        <div class="role-meta">
+          <b id="roleLabel">–</b>
+          <span id="userNombre">–</span>
+        </div>
+        <button class="icon-btn" id="btnLogout" title="Cerrar sesión"></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="workspace">
+
+    <!-- Catálogo -->
+    <aside class="col catalog">
+      <div class="col-head">
+        <h2>Catálogo acreditado</h2>
+        <div class="ch-actions">
+          <span class="count" id="admCatalogCountBadge">0/50</span>
+          <button class="add-method" id="btnAddMethod" title="Agregar nuevo método">+ Método</button>
+        </div>
+      </div>
+      <div class="search">
+        <span id="searchIco"></span>
+        <input id="search" type="text" placeholder="Buscar método, magnitud…">
+      </div>
+      <div class="col-body" id="catalogList">
+        <div class="empty"><div class="big">Cargando catálogo…</div></div>
+      </div>
+    </aside>
+
+    <!-- Orden de trabajo -->
+    <section class="col order">
+      <div class="order-scroll" id="orderScroll">
+
+        <!-- Cliente -->
+        <div class="panel">
+          <div class="panel-head">
+            <span class="ph-num">01</span>
+            <h3>Datos del cliente</h3>
+            <span class="ph-sub">Orden <span class="mono" id="ordNoLabel">Nueva Orden</span></span>
+          </div>
+          <div class="client-grid">
+            <div class="field">
+              <label>Empresa / Razón social</label>
+              <input id="cli_empresa" type="text" placeholder="Nombre de la empresa">
+            </div>
+            <div class="field">
+              <label>RUC</label>
+              <input id="cli_ruc" type="text" placeholder="20XXXXXXXXX">
+            </div>
+            <div class="field">
+              <label>Contacto</label>
+              <input id="cli_contacto" type="text" placeholder="Persona de contacto">
+            </div>
+            <div class="field">
+              <label>Correo de notificación</label>
+              <input id="cli_email" type="text" placeholder="correo@empresa.pe">
+            </div>
+            <div class="field">
+              <label>Teléfono</label>
+              <input id="cli_telefono" type="text" placeholder="+51 999 999 999">
+            </div>
+            <div class="field">
+              <label>Dirección</label>
+              <input id="cli_direccion" type="text" placeholder="Av. Principal 123">
+            </div>
+          </div>
+        </div>
+
+        <!-- Instrumentos -->
+        <div class="panel">
+          <div class="panel-head">
+            <span class="ph-num">02</span>
+            <h3>Instrumentos de la orden</h3>
+            <span class="ph-sub"><span class="mono" id="orderItemsCount">0</span> ítems · lote masivo</span>
+          </div>
+          <div style="padding:14px;">
+            <div class="instruments" id="instruments"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Resumen / Cotizador -->
+    <aside class="col summary">
+      <div class="col-head">
+        <h2>Resumen de orden</h2>
+      </div>
+      <div class="summary-body">
+
+        <div class="order-meta">
+          <div class="meta-row"><span>Instrumentos</span><b id="metaItems">00</b></div>
+          <div class="meta-row"><span>Puntos totales</span><b id="metaPoints">00</b></div>
+          <div class="meta-row"><span>Magnitudes</span><b id="metaMagnitudes">0</b></div>
+        </div>
+
+        <div class="total-card" id="totalCard">
+          <div class="tc-label">Costo total estimado</div>
+          <div class="tc-value mono" id="totalValue"><span class="cur">S/</span>0.00</div>
+          <div class="tc-foot">Tarifa unitaria × puntos seleccionados</div>
+          <div class="locked-note">🔒 Cálculo oculto para este rol</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn ghost" id="btnConstancia">Constancia de ingreso</button>
+          <button class="btn primary" id="btnQuote">Generar cotización</button>
+        </div>
+
+        <div class="role-note" id="roleNote">
+          <span id="roleNoteText"></span>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- ====================== LOGIN ====================== -->
+<div id="login">
+  <form class="login-card" id="loginForm">
+    <div class="login-mark">
+      <img src="logo.jpg" alt="Logo ESV Metrología" class="login-logo">
+    </div>
+    <h1>EX SCIENTIA <em>VERITAS</em></h1>
+    <div class="sub">LABORATORIO DE METROLOGÍA · ACCESO INTERNO</div>
+
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="loginUsername" autocomplete="username" placeholder="usuario" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
+    </div>
+
+    <div class="login-error" id="loginError"></div>
+
+    <button class="btn primary" type="submit">Ingresar al sistema</button>
+
+    <div class="login-register">
+      <span>¿Eres nuevo en el sistema?</span>
+      <button type="button" id="btnOpenRegister">Registrarse</button>
+    </div>
+    <div class="login-foot">
+      <span class="lock" id="loginLock"></span>
+      <span>SISTEMA CERRADO · CONTRASEÑA CIFRADA</span>
+    </div>
+  </form>
+</div>
+
+<!-- ====================== ÓRDENES (historial) ====================== -->
+<div id="ordersModal">
+  <div class="orders-modal-card">
+    <div class="om-head">
+      <div>
+        <div class="om-eyebrow">Historial del sistema</div>
+        <h3>Órdenes de trabajo</h3>
+      </div>
+      <button class="icon-btn" id="ordersModalClose" title="Cerrar"></button>
+    </div>
+    <div class="om-list" id="ordersModalList">
+      <div class="om-loading">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== DOCUMENTO ====================== -->
+<div id="docModal">
+  <div class="doc-shell">
+    <div class="doc-bar">
+      <div class="tabs" id="docTabs">
+        <button data-tab="constancia" class="active">Constancia de ingreso</button>
+        <button data-tab="cotizacion">Cotización</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="doc-pdf-group">
+        <button class="doc-pdf-btn" id="btnPdfConstancia" title="Descargar Constancia PDF">
+          <i class="ti ti-file-type-pdf" aria-hidden="true"></i> CI PDF
+        </button>
+        <button class="doc-pdf-btn accent" id="btnPdfCotizacion" title="Descargar Cotización PDF">
+          <i class="ti ti-file-type-pdf" aria-hidden="true"></i> COT PDF
+        </button>
+      </div>
+      <button class="icon-btn" id="docDownload" title="Descargar HTML"></button>
+      <button class="icon-btn" id="docPrint" title="Imprimir"></button>
+      <button class="icon-btn" id="docClose" title="Cerrar"></button>
+    </div>
+    <div class="doc-scroll">
+      <div class="sheet" id="sheet"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== MÉTODO (CRUD) ====================== -->
+<div id="methodModal">
+  <form class="mm-card" id="methodForm">
+    <div class="mm-head">
+      <div>
+        <div class="mm-eyebrow" id="mmEyebrow">Base de datos · Administrador</div>
+        <h3 id="mmTitle">Nuevo método acreditado</h3>
+      </div>
+      <button class="icon-btn" id="mmClose" type="button" title="Cerrar"></button>
+    </div>
+    <div class="mm-body">
+      <div class="mm-row">
+        <div class="field">
+          <label>Código del método</label>
+          <input id="mm_code" type="text" placeholder="Ej. INACAL PC-012">
+        </div>
+        <div class="field" style="flex:2">
+          <label>Nombre del método / equipo</label>
+          <input id="mm_name" type="text" placeholder="Ej. Balanza Analítica" required>
+        </div>
+      </div>
+      <div class="mm-row">
+        <div class="field">
+          <label>Área / Magnitud</label>
+          <input id="mm_area" type="text" placeholder="Ej. Masa">
+        </div>
+        <div class="field">
+          <label>Ícono</label>
+          <div class="icon-picker" id="mm_iconpicker"></div>
+        </div>
+      </div>
+      <div class="mm-row">
+        <div class="field">
+          <label>Descripción para cotización</label>
+          <input id="mm_procedure_desc" type="text" placeholder="Ej. Alta precisión clase F2-M1">
+        </div>
+        <div class="field">
+          <label>Foto del instrumento</label>
+          <input id="mm_image" type="file" accept="image/*" style="padding:4px;font-size:12px;">
+        </div>
+      </div>
+      <div class="field full">
+        <label>Puntos de calibración acreditados</label>
+        <div class="chip-input" id="mm_chipwrap">
+          <span class="chips" id="mm_chiplist"></span>
+          <input id="mm_pointinput" type="text" placeholder="Ej. 7.00 pH — Enter para añadir">
+        </div>
+        <div class="hint">Estos serán los <b>únicos</b> puntos seleccionables (regla INACAL).</div>
+      </div>
+      <div class="mm-row">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="mm_type">
+            <option value="0">Puntos</option>
+            <option value="1">Nominal</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tarifa (S/)</label>
+          <input id="mm_tariff" type="number" min="0" step="1" placeholder="0.00">
+        </div>
+        <div class="field price-preview">
+          <label>Costo de calibración completa</label>
+          <div class="pp-value mono" id="mm_preview">S/ 0.00</div>
+        </div>
+      </div>
+      <div class="field full">
+        <label>Indicaciones / notas internas (opcional)</label>
+        <textarea id="mm_note" rows="2" placeholder="Condiciones, observaciones o instrucciones para este método…"></textarea>
+      </div>
+    </div>
+    <div class="mm-foot">
+      <button type="button" class="btn danger-ghost" id="mmDelete">Eliminar</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn ghost" id="mmCancel">Cancelar</button>
+      <button type="submit" class="btn primary" id="mmSave">Guardar método</button>
+    </div>
+  </form>
+</div>
+
+<!-- ===== AGREGAR INSTRUMENTO (configuración de puntos) ===== -->
+<div id="addInstrModal">
+  <div class="ai-card">
+    <div class="ai-head">
+      <div class="ai-ico-wrap" id="aiIco"></div>
+      <div class="ai-title-block">
+        <div class="ai-eyebrow" id="aiArea">Área</div>
+        <h3 id="aiName">Instrumento</h3>
+        <div class="ai-tariff" id="aiTariff" style="display:none"></div>
+      </div>
+      <button class="icon-btn" id="aiClose" title="Cancelar"></button>
+    </div>
+    <div class="ai-body">
+      <div class="ai-pts-head">
+        <span class="ai-pts-label">Selecciona los puntos a calibrar</span>
+        <div class="ai-pts-actions">
+          <button type="button" id="aiSelectAll">Todos</button>
+          <button type="button" id="aiClearAll">Ninguno</button>
+        </div>
+      </div>
+      <div class="ai-points" id="aiPoints"></div>
+      <div class="ai-lock-note">
+        Sólo se admiten puntos del alcance acreditado ante INACAL.
+      </div>
+    </div>
+    <div class="ai-foot">
+      <div class="ai-cost-wrap" id="aiCostWrap" style="display:none">
+        <span>Costo estimado</span>
+        <b class="mono" id="aiCostValue">S/ 0.00</b>
+      </div>
+      <div class="ai-foot-actions">
+        <button class="btn ghost" id="aiCancel">Cancelar</button>
+        <button class="btn primary" id="aiConfirm" disabled>
+          Agregar a la orden <span id="aiPtsLabel"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CONFIRMACIÓN (modal reutilizable) ===== -->
+<div id="confirmModal">
+  <div class="confirm-card" id="confirmCard">
+    <div class="confirm-body">
+      <div class="confirm-ico" id="confirmIco"></div>
+      <h3 id="confirmTitle">Confirmar acción</h3>
+      <p id="confirmMsg"></p>
+    </div>
+    <div class="confirm-foot">
+      <button class="btn ghost sm" id="confirmCancel">Cancelar</button>
+      <button class="btn primary sm" id="confirmOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REGISTRO DE NUEVO USUARIO ===== -->
+<div id="registerModal">
+  <div class="rg-card">
+    <div class="rg-head">
+      <div>
+        <div class="rg-eyebrow">Portal de clientes · Ex Scientia Veritas</div>
+        <h3>Registro de cliente</h3>
+      </div>
+      <button class="icon-btn" id="rgClose" title="Cerrar"></button>
+    </div>
+    <form class="rg-body" id="registerForm" novalidate>
+
+      <div class="rg-section-label">Datos personales</div>
+      <div class="rg-grid">
+        <div class="field rg-full">
+          <label>Nombre completo <span class="req">*</span></label>
+          <input type="text" id="rg_nombre" autocomplete="name"
+                 placeholder="Nombres y apellidos completos">
+          <span class="field-msg" id="rg_nombre_msg"></span>
+        </div>
+        <div class="field">
+          <label>Usuario <span class="req">*</span></label>
+          <div class="field-avail-wrap">
+            <input type="text" id="rg_username" autocomplete="off"
+                   placeholder="Ej. j.ruiz" spellcheck="false">
+            <span class="avail-indicator" id="rg_username_avail"></span>
+          </div>
+          <span class="field-msg" id="rg_username_msg"></span>
+        </div>
+        <div class="field">
+          <label>DNI / Documento <span class="req">*</span></label>
+          <input type="text" id="rg_dni" placeholder="12345678" maxlength="12">
+          <span class="field-msg" id="rg_dni_msg"></span>
+        </div>
+        <div class="field rg-full">
+          <label>Correo electrónico <span class="req">*</span></label>
+          <div class="field-avail-wrap">
+            <input type="email" id="rg_email" autocomplete="email"
+                   placeholder="correo@empresa.pe">
+            <span class="avail-indicator" id="rg_email_avail"></span>
+          </div>
+          <span class="field-msg" id="rg_email_msg"></span>
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="tel" id="rg_telefono" placeholder="+51 999 999 999">
+        </div>
+        <div class="field">
+          <label>Cargo / Puesto <span class="req">*</span></label>
+          <input type="text" id="rg_cargo" placeholder="Ej. Jefe de Calidad, Gerente, Encargado">
+          <span class="field-msg" id="rg_cargo_msg"></span>
+        </div>
+        <div class="field rg-full">
+          <label>Empresa / Institución <span class="req">*</span></label>
+          <input type="text" id="rg_empresa" placeholder="Razón social o nombre de la empresa">
+          <span class="field-msg" id="rg_empresa_msg"></span>
+        </div>
+      </div>
+
+      <div class="rg-section-label" style="margin-top:16px">Ubicación en Perú</div>
+      <div class="rg-grid">
+        <div class="field">
+          <label>Departamento</label>
+          <select id="rg_departamento">
+            <option value="">— Seleccionar —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Provincia</label>
+          <select id="rg_provincia" disabled>
+            <option value="">— Primero elige departamento —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Distrito</label>
+          <select id="rg_distrito" disabled>
+            <option value="">— Primero elige provincia —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="rg-section-label" style="margin-top:16px">Contraseña de acceso</div>
+      <div class="rg-grid">
+        <div class="field">
+          <label>Contraseña <span class="req">*</span></label>
+          <input type="password" id="rg_pass" autocomplete="new-password"
+                 placeholder="Mínimo 8 caracteres">
+          <div class="pass-strength-bar"><div id="passStrengthFill"></div></div>
+          <span class="field-msg" id="rg_pass_msg"></span>
+        </div>
+        <div class="field">
+          <label>Confirmar contraseña <span class="req">*</span></label>
+          <input type="password" id="rg_pass2" autocomplete="new-password"
+                 placeholder="Repite la contraseña">
+          <span class="field-msg" id="rg_pass2_msg"></span>
+        </div>
+      </div>
+
+      <div class="rg-error" id="rgError"></div>
+
+    </form>
+    <div class="rg-foot">
+      <button type="button" class="btn ghost" id="rgCancel">Cancelar</button>
+      <button type="button" class="btn primary" id="rgSubmit">
+        Registrar mi empresa
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ====================== TOAST ====================== -->
+<div id="toast"><i id="toastIco"></i><span></span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js"></script>
+<script src="data.js"></script>
+<script src="ubigeo.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="ws.js"></script>
+<!-- Carga modular de Javascript -->
+<script src="js/utils.js"></script>
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/catalog.js"></script>
+<script src="js/order.js"></script>
+<script src="js/documents.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/messages.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/main.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PANEL DE ADMINISTRACIÓN ESV — Vista exclusiva para Admin
+     Se muestra en reemplazo total del workspace de usuario.
+     ═══════════════════════════════════════════════════════════ -->
+<div id="adminDashboard" class="hidden" role="main" aria-label="Panel de administración">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <aside class="adm-sidebar">
+    <div class="adm-brand">
+      <img src="logo.jpg" alt="ESV" class="adm-brand-logo">
+      <div>
+        <div class="adm-brand-name">EX SCIENTIA VERITAS</div>
+        <div class="adm-brand-sub">Sistema de Calibraciones</div>
+      </div>
+    </div>
+
+    <div class="adm-admin-info">
+      <div class="adm-avatar" id="admAvatar">AD</div>
+      <div>
+        <div class="adm-admin-name" id="admAdminName">Administrador</div>
+        <div class="adm-admin-role" id="admAdminRoleDesc">Administrador del sistema</div>
+      </div>
+    </div>
+
+    <nav class="adm-nav" role="navigation">
+      <button class="adm-nav-item active" data-section="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="adm-nav-item" data-section="usuarios">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
+        <span>Clientes</span>
+        <span class="adm-nav-badge" id="navBadgeUsers">0</span>
+      </button>
+      <button class="adm-nav-item" data-section="mensajeria">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Mensajería</span>
+        <span class="adm-nav-badge adm-nav-badge-red hidden" id="navBadgeMsgs">0</span>
+      </button>
+      <button class="adm-nav-item" data-section="ordenes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2"/></svg>
+        <span>Órdenes</span>
+      </button>
+      <button class="adm-nav-item" data-section="catalogo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span>Catálogo</span>
+      </button>
+      <button class="adm-nav-item" data-section="documentos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        <span>Documentos</span>
+      </button>
+      <button class="adm-nav-item" data-section="ajustes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Ajustes</span>
+      </button>
+      <button class="adm-nav-item" data-section="auditoria">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span>Auditoría</span>
+      </button>
+    </nav>
+
+    <div class="adm-nav-footer">
+      <button class="adm-nav-item adm-nav-item-logout" id="admLogoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        <span>Cerrar sesión</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ─────────────────────────────────────── -->
+  <div class="adm-main">
+
+    <!-- Topbar del admin -->
+    <header class="adm-topbar">
+      <div>
+        <h1 class="adm-page-title" id="admPageTitle">Dashboard</h1>
+        <p class="adm-page-crumb" id="admPageCrumb">Vista general del sistema</p>
+      </div>
+
+    </header>
+
+    <!-- ── SECCIÓN: Dashboard ── -->
+    <section class="adm-section adm-section-active" id="admSec-dashboard">
+      <div class="adm-stats-row" id="admStatsRow">
+        <div class="adm-stat-skeleton">Cargando métricas…</div>
+      </div>
+      <div class="adm-grid-2">
+        <div class="adm-card">
+          <div class="adm-card-head">Órdenes recientes</div>
+          <div class="adm-table-wrap">
+            <table class="adm-table"><thead><tr><th>Orden</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Fecha</th><th>Acciones</th></tr></thead>
+            <tbody id="admRecentOrders"><tr><td colspan="6" class="adm-empty">Cargando…</td></tr></tbody></table>
+          </div>
+        </div>
+        <div class="adm-card">
+          <div class="adm-card-head">Clientes registrados recientemente</div>
+          <div id="admRecentUsers" class="adm-user-mini-list"><div class="adm-empty">Cargando…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Usuarios ── -->
+    <section class="adm-section" id="admSec-usuarios">
+      <div class="adm-card">
+        <div class="adm-card-head">
+          Clientes registrados
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="adm-btn-sm" id="admExportBtn">Exportar CSV</button>
+          </div>
+        </div>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead><tr><th>Usuario</th><th>Nombre</th><th>Empresa / Institución</th><th>Email</th><th>Cargo</th><th>Registro</th><th>Rol</th><th>Acciones</th></tr></thead>
+            <tbody id="admUsersList"><tr><td colspan="8" class="adm-empty">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Mensajería ── -->
+    <section class="adm-section" id="admSec-mensajeria">
+      <div class="adm-msg-layout">
+        <div class="adm-msg-sidebar">
+          <div class="adm-msg-sidebar-head">
+            <span class="adm-msg-sidebar-title">Conversaciones</span>
+            <button class="adm-btn-sm" id="admBroadcastBtn">📢 Enviar a todos</button>
+          </div>
+          <input class="adm-msg-search" id="admMsgSearch" type="text" placeholder="Buscar cliente…">
+          <div class="adm-msg-list" id="admMsgUserList"><div class="adm-empty">Cargando usuarios…</div></div>
+        </div>
+        <div class="adm-msg-main">
+          <div class="adm-msg-empty" id="admMsgEmpty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" style="width:52px;height:52px;stroke:var(--line-strong)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <p>Selecciona un usuario para ver la conversación</p>
+          </div>
+          <div class="adm-conv hidden" id="admConv">
+            <div class="adm-conv-header" id="admConvHeader"></div>
+            <div class="adm-conv-body" id="admConvBody"></div>
+            <div class="adm-compose">
+              <div class="adm-compose-attach-preview hidden" id="admAttachPreview">
+                <span id="admAttachName">archivo.pdf</span>
+                <button onclick="admClearAttach()" style="border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted)">×</button>
+              </div>
+              <div class="adm-compose-row">
+                <button class="adm-compose-icon-btn" id="admAttachBtn" title="Adjuntar archivo">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <input type="file" id="admFileInput" style="display:none" accept="image/*,application/pdf,.doc,.docx,.xlsx,.xls,.txt,.csv">
+                <textarea class="adm-compose-input" id="admComposeText" placeholder="Escribe un mensaje al cliente…" rows="1"></textarea>
+                <button class="adm-send-btn" id="admSendBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2L15 22l-4-9L2 9z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Órdenes ── -->
+    <section class="adm-section" id="admSec-ordenes">
+      <div class="adm-card">
+        <div class="adm-card-head">
+          Gestión de órdenes de trabajo
+          <div class="adm-filter-row" id="admOrderFilters">
+            <button class="adm-filter-btn active" data-status="" title="Ver todas las órdenes de trabajo sin filtros">Todas</button>
+            <button class="adm-filter-btn" data-status="borrador" title="Borrador: Apunte inicial. Aún no es una orden formal.">Borrador</button>
+            <button class="adm-filter-btn" data-status="ingresado" title="Ingresado: Orden registrada formalmente, en espera de revisión o cotización.">Ingresado</button>
+            <button class="adm-filter-btn" data-status="cotizado" title="Cotizado: Se ha generado un presupuesto para esta orden.">Cotizado</button>
+            <button class="adm-filter-btn" data-status="aprobado" title="Aprobado: El cliente aceptó la cotización y la orden está lista para ejecutarse.">Aprobado</button>
+            <button class="adm-filter-btn" data-status="en_proceso" title="En proceso: Los equipos se encuentran en proceso de calibración o mantenimiento.">En proceso</button>
+            <button class="adm-filter-btn" data-status="finalizado" title="Finalizado: El trabajo ha concluido y los certificados están listos.">Finalizado</button>
+          </div>
+        </div>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead><tr><th>N° Orden</th><th>Cliente</th><th>Estado</th><th>Items</th><th>Total est.</th><th>Creado por</th><th>Fecha</th><th>Acciones</th></tr></thead>
+            <tbody id="admOrdersList"><tr><td colspan="8" class="adm-empty">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Catálogo ── -->
+    <section class="adm-section" id="admSec-catalogo">
+      <div class="adm-card">
+        <div class="adm-card-head">
+          Catálogo acreditado INACAL
+          <span class="adm-card-sub" id="admCatalogCount"></span>
+          <button class="adm-btn-sm" id="admCatalogNewBtn" style="margin-left:auto;background:#3B6D11;border-color:#3B6D11;color:#fff">+ Nuevo método</button>
+        </div>
+        <div class="adm-search-bar" style="padding:10px 16px;border-bottom:1px solid #f0f0f0">
+          <input id="admCatalogSearch" type="text" placeholder="Buscar por nombre, código o área…"
+            style="width:100%;max-width:400px;padding:7px 12px;border-radius:8px;border:1px solid #eee;font-size:13px;background:#fafafa">
+        </div>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead><tr>
+              <th>Código</th><th>Método / Instrumento</th><th>Área</th>
+              <th>Tarifa (S/)</th><th>Puntos</th><th>Tipo</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="admCatalogList"><tr><td colspan="7" class="adm-empty">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Documentos ── -->
+    <section class="adm-section" id="admSec-documentos">
+      <div class="adm-card">
+        <div class="adm-card-head">Historial de documentos generados</div>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead><tr><th>Tipo</th><th>N° Documento</th><th>Orden</th><th>Cliente</th><th>Generado por</th><th>Fecha</th><th>Acción</th></tr></thead>
+            <tbody id="admDocsList"><tr><td colspan="7" class="adm-empty">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Ajustes y Plantillas ── -->
+    <section class="adm-section" id="admSec-ajustes">
+      <div class="adm-card">
+        <div class="adm-card-head">Ajustes y Plantillas Dinámicas</div>
+        <form id="settingsForm" style="padding:20px; display:flex; flex-direction:column; gap:20px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px;">
+            <div class="field">
+              <label>Nombre de la Empresa</label>
+              <input type="text" id="set_company_name" name="company_name" placeholder="Ej. EX SCIENTIA VERITAS">
+            </div>
+            <div class="field">
+              <label>RUC</label>
+              <input type="text" id="set_company_ruc" name="company_ruc" placeholder="Ej. 20554508112">
+            </div>
+            <div class="field">
+              <label>Dirección</label>
+              <input type="text" id="set_company_address" name="company_address" placeholder="Av. Prueba 123">
+            </div>
+            <div class="field">
+              <label>Texto legal del pie de página (PDF)</label>
+              <input type="text" id="set_pdf_footer" name="pdf_footer" placeholder="Ej. EX SCIENTIA VERITAS · Laboratorio...">
+            </div>
+          </div>
+          
+          <div class="field full">
+            <label>Editor de Plantilla: Condiciones de Cotización</label>
+            <div style="margin-top: 10px;">
+              <textarea id="set_quote_template_html" name="quote_template_html"></textarea>
+            </div>
+            <div class="hint" style="margin-top:10px">Usa este editor visual para modificar las consideraciones y términos del servicio. Mantén la estructura de bloques para asegurar que el PDF se genere correctamente.</div>
+          </div>
+          
+          <div>
+            <button type="submit" class="btn primary" id="btnSaveSettings">Guardar Plantilla y Ajustes</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Auditoría ── -->
+    <section class="adm-section" id="admSec-auditoria">
+      <div class="adm-card">
+        <div class="adm-card-head">Registro de Auditoría (Trazabilidad)</div>
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead><tr><th>Fecha y Hora</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID Entidad</th><th>Detalles</th></tr></thead>
+            <tbody id="admAuditList"><tr><td colspan="6" class="adm-empty">Cargando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /.adm-main -->
+</div><!-- /#adminDashboard -->
+
+<!-- ═══ PANEL MENSAJERÍA USUARIO ═══ -->
+<div id="msgUserPanel" class="msg-panel-overlay hidden" role="dialog" aria-label="Chat con administrador">
+  <div class="msg-panel">
+
+    <!-- Cabecera con info del admin -->
+    <div class="msg-panel-header">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <div class="msg-admin-av" id="msgAdminAv">AD</div>
+        <div style="min-width:0">
+          <div class="msg-panel-title" id="msgAdminName">Administrador ESV</div>
+          <div class="msg-panel-sub" id="msgPanelStatus">
+            <span class="msg-status-dot"></span>En línea
+          </div>
+        </div>
+      </div>
+      <button id="msgPanelClose" aria-label="Cerrar mensajes"
+        style="background:rgba(255,255,255,.1);border:none;cursor:pointer;color:#fff;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <!-- Cuerpo conversación -->
+    <div class="msg-conv-body" id="msgConvBody">
+      <div class="adm-empty" style="padding:32px 16px">Cargando conversación…</div>
+    </div>
+
+    <!-- Adjunto preview -->
+    <div id="msgAttachPrev" style="display:none;align-items:center;gap:8px;padding:7px 12px;background:#f5f5f5;border-top:0.5px solid #eee;font-size:12px;color:#555">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex:none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      <span id="msgAttachPrevName" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="msgClearAttach()" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:18px;line-height:1">×</button>
+    </div>
+
+    <!-- Compose -->
+    <div class="msg-panel-compose">
+      <div style="display:flex;align-items:flex-end;gap:8px">
+        <button class="adm-compose-icon-btn" id="msgUserAttachBtn" aria-label="Adjuntar archivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <input type="file" id="msgUserFile" style="display:none" accept="image/*,application/pdf,.doc,.docx,.xlsx,.xls,.txt,.csv">
+        <textarea class="adm-compose-input" id="msgUserText" placeholder="Escribe un mensaje…" rows="1"
+          style="flex:1;resize:none;max-height:100px"></textarea>
+        <button class="adm-send-btn" id="msgUserSendBtn" aria-label="Enviar mensaje">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M22 2L11 13M22 2L15 22l-4-9L2 9z"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL PERFIL DE CLIENTE
+     ═══════════════════════════════════════════════════════ -->
+<div id="profileModal" class="prof-overlay hidden" role="dialog" aria-label="Mi perfil" aria-modal="true">
+  <div class="prof-card">
+
+    <!-- Cabecera -->
+    <div class="prof-header">
+      <div class="prof-header-left">
+        <div class="prof-big-av" id="profBigAv">CL</div>
+        <div>
+          <div class="prof-header-name" id="profHeaderName">Mi perfil</div>
+          <div class="prof-header-role">Cliente registrado · ESV</div>
+        </div>
+      </div>
+      <button class="prof-close-btn" id="profileClose" aria-label="Cerrar perfil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="prof-tabs" role="tablist">
+      <button class="prof-tab active" data-ptab="datos" role="tab" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Mis datos
+      </button>
+      <button class="prof-tab" data-ptab="empresa" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        Empresa
+      </button>
+      <button class="prof-tab" data-ptab="password" role="tab" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Contraseña
+      </button>
+    </div>
+
+    <!-- Contenido -->
+    <div class="prof-body">
+
+      <!-- Tab: Datos personales -->
+      <div class="prof-pane active" id="ptab-datos">
+        <div class="prof-field-grid">
+          <div class="prof-field prof-full">
+            <label class="prof-label">Nombre completo</label>
+            <input class="prof-input" id="pf_nombre" type="text" placeholder="Nombres y apellidos">
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">Correo electrónico</label>
+            <input class="prof-input" id="pf_email" type="email" disabled
+              style="background:var(--surface-2,#f5f5f5);color:var(--muted,#888)" title="El correo no se puede cambiar directamente">
+            <small class="prof-hint">Para cambiar el correo contáctate con el administrador.</small>
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">Teléfono</label>
+            <input class="prof-input" id="pf_telefono" type="tel" placeholder="+51 999 999 999">
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">DNI / N° de documento</label>
+            <input class="prof-input" id="pf_dni" type="text" placeholder="12345678" maxlength="12">
+          </div>
+        </div>
+        <div id="profDatosMsg" class="prof-result hidden"></div>
+        <div class="prof-actions">
+          <button class="prof-btn-save" id="pfSaveDatos">Guardar datos personales</button>
+        </div>
+      </div>
+
+      <!-- Tab: Empresa -->
+      <div class="prof-pane" id="ptab-empresa">
+        <div class="prof-field-grid">
+          <div class="prof-field prof-full">
+            <label class="prof-label">Empresa / Razón social <span class="req">*</span></label>
+            <input class="prof-input" id="pf_empresa" type="text" placeholder="Nombre de la empresa">
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">Cargo / Puesto</label>
+            <input class="prof-input" id="pf_cargo" type="text" placeholder="Ej. Jefe de Calidad, Gerente">
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">Departamento</label>
+            <select class="prof-input" id="pf_departamento">
+              <option value="">— Seleccionar —</option>
+            </select>
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">Provincia</label>
+            <select class="prof-input" id="pf_provincia">
+              <option value="">— Seleccionar —</option>
+            </select>
+          </div>
+          <div class="prof-field prof-full">
+            <label class="prof-label">Distrito</label>
+            <select class="prof-input" id="pf_distrito">
+              <option value="">— Seleccionar —</option>
+            </select>
+          </div>
+        </div>
+        <div id="profEmpresaMsg" class="prof-result hidden"></div>
+        <div class="prof-actions">
+          <button class="prof-btn-save" id="pfSaveEmpresa">Guardar datos de empresa</button>
+        </div>
+      </div>
+
+      <!-- Tab: Contraseña -->
+      <div class="prof-pane" id="ptab-password">
+        <div class="prof-pw-info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Usa al menos 8 caracteres con una combinación de letras y números.
+        </div>
+        <div class="prof-field-grid">
+          <div class="prof-field prof-full">
+            <label class="prof-label">Contraseña actual</label>
+            <div class="prof-pw-wrap">
+              <input class="prof-input" id="pf_pw_actual" type="password" placeholder="Tu contraseña actual" autocomplete="current-password">
+              <button class="prof-pw-eye" data-target="pf_pw_actual" aria-label="Ver contraseña">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">Nueva contraseña</label>
+            <div class="prof-pw-wrap">
+              <input class="prof-input" id="pf_pw_nueva" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+              <button class="prof-pw-eye" data-target="pf_pw_nueva" aria-label="Ver contraseña">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="prof-pw-bar"><div id="profPwBar"></div></div>
+            <div class="prof-pw-strength" id="profPwStrength"></div>
+          </div>
+          <div class="prof-field">
+            <label class="prof-label">Confirmar nueva contraseña</label>
+            <input class="prof-input" id="pf_pw_confirm" type="password" placeholder="Repite la nueva contraseña" autocomplete="new-password">
+          </div>
+        </div>
+        <div id="profPwMsg" class="prof-result hidden"></div>
+        <div class="prof-actions">
+          <button class="prof-btn-save" id="pfSavePw">Cambiar contraseña</button>
+        </div>
+      </div>
+
+    </div><!-- /.prof-body -->
+  </div><!-- /.prof-card -->
+</div><!-- /#profileModal -->
+
+</body>
+</html>

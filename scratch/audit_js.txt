@@ -1,0 +1,48 @@
+
+/* ═══════════════════════════════════════════════════════════
+   AUDITORÍA (TRAZABILIDAD)
+   ═══════════════════════════════════════════════════════════ */
+async function admLoadAudit(page=1) {
+  const tb = $('#admAuditList');
+  if(!tb) return;
+  tb.innerHTML = '<tr><td colspan="6" class="adm-empty">Cargando bitácora de auditoría...</td></tr>';
+  try {
+    const res = await apiFetch(`/api/admin/audit?page=${page}&limit=50`);
+    if(!res.data || res.data.length === 0) {
+      tb.innerHTML = '<tr><td colspan="6" class="adm-empty">No hay registros de auditoría.</td></tr>';
+      return;
+    }
+    
+    tb.innerHTML = res.data.map(log => {
+      const date = new Date(log.created_at).toLocaleString('es-PE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      const user = log.user_name ? `${esc(log.user_name)} <br><small style="color:var(--muted)">${esc(log.user_role)}</small>` : 'Sistema';
+      
+      let actionColor = 'var(--text-color)';
+      if(log.action.includes('UPDATE')) actionColor = '#185FA5';
+      if(log.action.includes('CREATE') || log.action.includes('GENERATE')) actionColor = '#3B6D11';
+      if(log.action.includes('DELETE')) actionColor = '#b3261e';
+      
+      const actionHtml = `<span style="color:${actionColor};font-weight:600;font-size:12px;">${esc(log.action)}</span>`;
+      
+      let detailsText = '';
+      if(log.details) {
+        detailsText = `<pre style="margin:0;font-size:11px;color:var(--muted);background:var(--surface-2);padding:4px;border-radius:4px;max-width:300px;overflow-x:auto;">${esc(JSON.stringify(log.details, null, 2))}</pre>`;
+      }
+      
+      return `<tr>
+        <td style="white-space:nowrap;font-size:12px">${date}</td>
+        <td>${user}</td>
+        <td>${actionHtml}</td>
+        <td><span class="adm-chip" style="background:#eee;color:#555">${esc(log.entity_type)}</span></td>
+        <td class="mono">${esc(log.entity_id)}</td>
+        <td>${detailsText}</td>
+      </tr>`;
+    }).join('');
+    
+  } catch(e) {
+    tb.innerHTML = `<tr><td colspan="6" class="adm-empty" style="color:red">Error: ${e.message}</td></tr>`;
+  }
+}

@@ -1,0 +1,516 @@
+===============================================================
+  EX SCIENTIA VERITAS — Referencia de Consultas MySQL
+  Sistema de Calibraciones v3.0
+  Base de datos: esv_calibraciones
+  Actualizado: 2026
+===============================================================
+
+  INSTRUCCIONES:
+  • Abrir MySQL Workbench
+  • Conectarse al servidor local
+  • Seleccionar la BD: USE esv_calibraciones;
+  • Copiar y ejecutar la consulta deseada
+
+===============================================================
+  SECCIÓN 1 — VERIFICACIÓN Y ESTADO DE LA BASE DE DATOS
+===============================================================
+
+-- Verificar que todas las tablas existen
+SHOW TABLES;
+
+-- Verificar la estructura de cada tabla
+DESCRIBE users;
+DESCRIBE catalog_methods;
+DESCRIBE calibration_points;
+DESCRIBE clients;
+DESCRIBE work_orders;
+DESCRIBE order_instruments;
+DESCRIBE instrument_points;
+DESCRIBE documents;
+DESCRIBE notifications;
+DESCRIBE user_requests;
+
+-- Ver cuántos registros hay en cada tabla
+SELECT 'users'             AS tabla, COUNT(*) AS registros FROM users
+UNION ALL
+SELECT 'catalog_methods',             COUNT(*) FROM catalog_methods
+UNION ALL
+SELECT 'calibration_points',          COUNT(*) FROM calibration_points
+UNION ALL
+SELECT 'clients',                     COUNT(*) FROM clients
+UNION ALL
+SELECT 'work_orders',                 COUNT(*) FROM work_orders
+UNION ALL
+SELECT 'order_instruments',           COUNT(*) FROM order_instruments
+UNION ALL
+SELECT 'notifications',               COUNT(*) FROM notifications;
+
+-- Verificar índices de la base de datos
+SHOW INDEX FROM users;
+SHOW INDEX FROM work_orders;
+SHOW INDEX FROM order_instruments;
+
+-- Ver tamaño de la base de datos en MB
+SELECT
+    table_name AS 'Tabla',
+    ROUND((data_length + index_length) / 1024 / 1024, 3) AS 'Tamaño (MB)'
+FROM information_schema.tables
+WHERE table_schema = 'esv_calibraciones'
+ORDER BY (data_length + index_length) DESC;
+
+
+===============================================================
+  SECCIÓN 2 — GESTIÓN DE USUARIOS
+===============================================================
+
+-- Ver todos los usuarios del sistema
+SELECT
+    id, username, nombre, role, email,
+    empresa, cargo, departamento, provincia, distrito,
+    active,
+    DATE_FORMAT(last_login, '%d/%m/%Y %H:%i') AS ultimo_acceso,
+    DATE_FORMAT(created_at,  '%d/%m/%Y')       AS fecha_creacion
+FROM users
+ORDER BY role, nombre;
+
+-- Ver solo usuarios activos
+SELECT id, username, nombre, role, email, cargo
+FROM users
+WHERE active = 1
+ORDER BY role, nombre;
+
+-- Ver usuarios por rol
+SELECT id, username, nombre, email, cargo
+FROM users
+WHERE role = 'gerencia'    -- cambiar: 'responsable' | 'operador'
+  AND active = 1;
+
+-- Buscar usuario por nombre o correo
+SELECT id, username, nombre, role, email, active
+FROM users
+WHERE nombre LIKE '%Garcia%'      -- reemplazar con el nombre a buscar
+   OR email  LIKE '%garcia%';
+
+-- Ver usuarios con último acceso (más recientes primero)
+SELECT username, nombre, role,
+       DATE_FORMAT(last_login, '%d/%m/%Y %H:%i:%s') AS ultimo_acceso
+FROM users
+WHERE last_login IS NOT NULL
+ORDER BY last_login DESC;
+
+-- Cambiar rol de un usuario
+UPDATE users
+SET role = 'responsable'   -- 'operador' | 'responsable' | 'gerencia'
+WHERE username = 'j.ruiz'; -- reemplazar con el username correcto
+
+-- Desactivar un usuario (no elimina, solo bloquea acceso)
+UPDATE users SET active = 0
+WHERE username = 'm.rios';
+
+-- Reactivar un usuario
+UPDATE users SET active = 1
+WHERE username = 'm.rios';
+
+-- Cambiar contraseña — PRIMERO generar el hash con Python:
+--   python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash('nueva_clave2026'))"
+-- Luego pegar el resultado aquí:
+UPDATE users
+SET password_hash = 'scrypt:...PEGAR_HASH_AQUI...'
+WHERE username = 'm.rios';
+
+-- Ver usuarios que nunca han iniciado sesión
+SELECT username, nombre, role, email,
+       DATE_FORMAT(created_at, '%d/%m/%Y') AS creado
+FROM users
+WHERE last_login IS NULL AND active = 1;
+
+-- Eliminar permanentemente un usuario (usar con precaución)
+-- Esto también elimina sus órdenes y notificaciones por CASCADE
+DELETE FROM users WHERE username = 'usuario_a_eliminar';
+
+
+===============================================================
+  SECCIÓN 3 — ÓRDENES DE TRABAJO
+===============================================================
+
+-- Ver todas las órdenes de trabajo (más recientes primero)
+SELECT
+    o.order_no,
+    o.status,
+    c.empresa,
+    c.ruc,
+    u.nombre    AS responsable,
+    COUNT(oi.id) AS n_instrumentos,
+    o.total_estimated AS total_s,
+    DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha
+FROM work_orders o
+JOIN clients c ON c.id = o.client_id
+JOIN users   u ON u.id = o.created_by
+LEFT JOIN order_instruments oi ON oi.order_id = o.id
+GROUP BY o.id
+ORDER BY o.created_at DESC;
+
+-- Órdenes por estado
+SELECT order_no, status, total_estimated,
+       DATE_FORMAT(created_at, '%d/%m/%Y') AS fecha
+FROM work_orders
+WHERE status = 'borrador'    -- cambiar estado según necesidad
+                              -- 'borrador' | 'ingresado' | 'cotizado'
+                              -- 'aprobado' | 'en_proceso' | 'finalizado'
+ORDER BY created_at DESC;
+
+-- Órdenes de un usuario específico
+SELECT o.order_no, o.status, c.empresa, o.total_estimated,
+       DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha
+FROM work_orders o
+JOIN clients c ON c.id = o.client_id
+JOIN users   u ON u.id = o.created_by
+WHERE u.username = 'm.rios'   -- reemplazar con el username
+ORDER BY o.created_at DESC;
+
+-- Órdenes por cliente (empresa)
+SELECT o.order_no, o.status, o.total_estimated,
+       DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha
+FROM work_orders o
+JOIN clients c ON c.id = o.client_id
+WHERE c.empresa LIKE '%Energy%'   -- reemplazar con nombre del cliente
+ORDER BY o.created_at DESC;
+
+-- Detalle de una orden específica
+SELECT
+    o.order_no, o.status, o.total_estimated,
+    c.empresa, c.ruc, c.contacto, c.telefono, c.email,
+    cm.name AS metodo, oi.marca, oi.serie, oi.alcance,
+    oi.subtotal,
+    GROUP_CONCAT(ip.point_label SEPARATOR ' | ') AS puntos
+FROM work_orders o
+JOIN clients           c  ON c.id  = o.client_id
+JOIN order_instruments oi ON oi.order_id = o.id
+JOIN catalog_methods   cm ON cm.id = oi.method_id
+LEFT JOIN instrument_points ip ON ip.instrument_id = oi.id
+WHERE o.order_no = 'ESV-OT-2026-0001'   -- reemplazar con el N° de orden
+GROUP BY oi.id;
+
+-- Cambiar estado de una orden
+UPDATE work_orders
+SET status = 'finalizado'              -- nuevo estado
+WHERE order_no = 'ESV-OT-2026-0001';  -- reemplazar con el N° de orden
+
+-- Órdenes del mes actual
+SELECT o.order_no, c.empresa, o.status, o.total_estimated
+FROM work_orders o
+JOIN clients c ON c.id = o.client_id
+WHERE YEAR(o.created_at)  = YEAR(NOW())
+  AND MONTH(o.created_at) = MONTH(NOW())
+ORDER BY o.created_at DESC;
+
+-- Resumen de ingresos por mes (año actual)
+SELECT
+    MONTHNAME(created_at) AS mes,
+    MONTH(created_at)     AS n_mes,
+    COUNT(*)              AS total_ordenes,
+    SUM(total_estimated)  AS ingresos_estimados
+FROM work_orders
+WHERE YEAR(created_at) = YEAR(NOW())
+  AND status NOT IN ('borrador')
+GROUP BY MONTH(created_at), MONTHNAME(created_at)
+ORDER BY n_mes;
+
+-- Ingresos totales por año
+SELECT
+    YEAR(created_at)     AS anio,
+    COUNT(*)             AS ordenes,
+    SUM(total_estimated) AS total_estimado
+FROM work_orders
+WHERE status IN ('finalizado', 'en_proceso', 'aprobado')
+GROUP BY YEAR(created_at)
+ORDER BY anio DESC;
+
+
+===============================================================
+  SECCIÓN 4 — CATÁLOGO DE MÉTODOS
+===============================================================
+
+-- Ver catálogo completo con puntos
+SELECT
+    cm.id, cm.code, cm.area, cm.name,
+    cm.tariff AS tarifa_por_punto,
+    cm.procedure_code,
+    COUNT(cp.id) AS n_puntos,
+    cm.active
+FROM catalog_methods cm
+LEFT JOIN calibration_points cp ON cp.method_id = cm.id
+GROUP BY cm.id
+ORDER BY cm.area, cm.name;
+
+-- Ver métodos por área
+SELECT name, tariff, procedure_code, procedure_description
+FROM catalog_methods
+WHERE area = 'Química'   -- cambiar: 'Dimensional' | 'Mecánica' | etc.
+  AND active = 1;
+
+-- Ver los puntos de calibración de un método
+SELECT cm.name AS metodo, cp.point_label AS punto,
+       cp.uncertainty AS incertidumbre, cp.sort_order
+FROM calibration_points cp
+JOIN catalog_methods cm ON cm.id = cp.method_id
+WHERE cm.code = 'cf-matraz-aforo'   -- reemplazar con el código del método
+ORDER BY cp.sort_order;
+
+-- Métodos más utilizados en órdenes
+SELECT cm.name, cm.area, COUNT(oi.id) AS veces_usado
+FROM catalog_methods cm
+JOIN order_instruments oi ON oi.method_id = cm.id
+GROUP BY cm.id
+ORDER BY veces_usado DESC
+LIMIT 10;
+
+-- Actualizar tarifa de un método
+UPDATE catalog_methods
+SET tariff = 250.00             -- nueva tarifa
+WHERE code = 'mf-bal-clase1';  -- reemplazar con el código del método
+
+-- Ver todos los métodos con su descripción de procedimiento
+SELECT code, name, procedure_code, procedure_description
+FROM catalog_methods
+WHERE active = 1
+ORDER BY area, name;
+
+
+===============================================================
+  SECCIÓN 5 — CLIENTES
+===============================================================
+
+-- Ver todos los clientes registrados
+SELECT id, empresa, ruc, contacto, email, telefono, direccion,
+       DATE_FORMAT(created_at, '%d/%m/%Y') AS registro
+FROM clients
+ORDER BY empresa;
+
+-- Buscar cliente por nombre o RUC
+SELECT id, empresa, ruc, contacto, email
+FROM clients
+WHERE empresa LIKE '%Energy%'    -- reemplazar con nombre del cliente
+   OR ruc     LIKE '%2060%';
+
+-- Clientes con más órdenes
+SELECT c.empresa, c.ruc, COUNT(o.id) AS total_ordenes,
+       SUM(o.total_estimated) AS facturado
+FROM clients c
+JOIN work_orders o ON o.client_id = c.id
+GROUP BY c.id
+ORDER BY total_ordenes DESC
+LIMIT 10;
+
+-- Ver historial de un cliente específico
+SELECT o.order_no, o.status, o.total_estimated,
+       DATE_FORMAT(o.created_at, '%d/%m/%Y') AS fecha
+FROM work_orders o
+JOIN clients c ON c.id = o.client_id
+WHERE c.ruc = '20608359037'   -- reemplazar con el RUC del cliente
+ORDER BY o.created_at DESC;
+
+
+===============================================================
+  SECCIÓN 6 — DOCUMENTOS GENERADOS
+===============================================================
+
+-- Ver documentos generados (más recientes primero)
+SELECT
+    d.doc_type AS tipo, d.doc_number AS numero,
+    o.order_no AS orden,
+    c.empresa  AS cliente,
+    u.nombre   AS generado_por,
+    DATE_FORMAT(d.generated_at, '%d/%m/%Y %H:%i') AS fecha
+FROM documents d
+JOIN work_orders o ON o.id = d.order_id
+JOIN clients     c ON c.id = o.client_id
+JOIN users       u ON u.id = d.generated_by
+ORDER BY d.generated_at DESC
+LIMIT 50;
+
+-- Ver constancias generadas este mes
+SELECT d.doc_number, o.order_no, c.empresa,
+       DATE_FORMAT(d.generated_at, '%d/%m/%Y %H:%i') AS fecha
+FROM documents d
+JOIN work_orders o ON o.id = d.order_id
+JOIN clients     c ON c.id = o.client_id
+WHERE d.doc_type = 'constancia'
+  AND MONTH(d.generated_at) = MONTH(NOW())
+  AND YEAR(d.generated_at)  = YEAR(NOW())
+ORDER BY d.generated_at DESC;
+
+-- Ver cotizaciones generadas
+SELECT d.doc_number, o.order_no, c.empresa, o.total_estimated,
+       DATE_FORMAT(d.generated_at, '%d/%m/%Y %H:%i') AS fecha
+FROM documents d
+JOIN work_orders o ON o.id = d.order_id
+JOIN clients     c ON c.id = o.client_id
+WHERE d.doc_type = 'cotizacion'
+ORDER BY d.generated_at DESC;
+
+
+===============================================================
+  SECCIÓN 7 — NOTIFICACIONES
+===============================================================
+
+-- Ver notificaciones no leídas de todos los usuarios
+SELECT
+    u.nombre AS usuario, n.tipo, n.titulo,
+    n.mensaje, n.referencia,
+    DATE_FORMAT(n.created_at, '%d/%m/%Y %H:%i') AS fecha
+FROM notifications n
+JOIN users u ON u.id = n.user_id
+WHERE n.leida = 0
+ORDER BY n.created_at DESC;
+
+-- Ver notificaciones de un usuario
+SELECT tipo, titulo, mensaje, referencia,
+       leida, DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') AS fecha
+FROM notifications
+WHERE user_id = 1   -- reemplazar con el ID del usuario
+ORDER BY leida ASC, created_at DESC;
+
+-- Marcar todas las notificaciones de un usuario como leídas
+UPDATE notifications SET leida = 1
+WHERE user_id = 1;   -- reemplazar con el ID del usuario
+
+-- Eliminar notificaciones antiguas (más de 90 días)
+DELETE FROM notifications
+WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY);
+
+-- Contar notificaciones no leídas por usuario
+SELECT u.nombre, u.role, COUNT(n.id) AS no_leidas
+FROM users u
+LEFT JOIN notifications n ON n.user_id = u.id AND n.leida = 0
+WHERE u.active = 1
+GROUP BY u.id
+ORDER BY no_leidas DESC;
+
+
+===============================================================
+  SECCIÓN 8 — REGISTROS DE USUARIO (user_requests)
+===============================================================
+
+-- Ver solicitudes de registro pendientes
+SELECT id, nombre_completo, username, email,
+       cargo, empresa, rol_solicitado,
+       DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') AS fecha
+FROM user_requests
+WHERE estado = 'pendiente'
+ORDER BY created_at ASC;
+
+-- Ver todos los registros (pendientes, aprobados, rechazados)
+SELECT
+    r.nombre_completo, r.username, r.email,
+    r.rol_solicitado, r.estado,
+    u.nombre AS aprobado_por,
+    DATE_FORMAT(r.created_at, '%d/%m/%Y') AS solicitud,
+    DATE_FORMAT(r.revisado_at, '%d/%m/%Y') AS revision
+FROM user_requests r
+LEFT JOIN users u ON u.id = r.revisado_por
+ORDER BY FIELD(r.estado,'pendiente','aprobada','rechazada'), r.created_at DESC;
+
+
+===============================================================
+  SECCIÓN 9 — REPORTES Y ESTADÍSTICAS
+===============================================================
+
+-- Resumen general del sistema
+SELECT
+    (SELECT COUNT(*) FROM users     WHERE active=1)   AS usuarios_activos,
+    (SELECT COUNT(*) FROM catalog_methods WHERE active=1) AS metodos_catalogo,
+    (SELECT COUNT(*) FROM work_orders)                AS total_ordenes,
+    (SELECT COUNT(*) FROM clients)                    AS total_clientes,
+    (SELECT SUM(total_estimated) FROM work_orders
+     WHERE status IN ('finalizado','aprobado','en_proceso'))
+                                                      AS ingresos_estimados_acumulados;
+
+-- Top 5 métodos más calibrados este año
+SELECT
+    cm.name  AS metodo,
+    cm.area,
+    COUNT(oi.id) AS calibraciones
+FROM order_instruments oi
+JOIN catalog_methods cm ON cm.id = oi.method_id
+JOIN work_orders     o  ON o.id  = oi.order_id
+WHERE YEAR(o.created_at) = YEAR(NOW())
+GROUP BY cm.id
+ORDER BY calibraciones DESC
+LIMIT 5;
+
+-- Actividad del sistema por usuario (este mes)
+SELECT
+    u.nombre, u.role,
+    COUNT(DISTINCT o.id) AS ordenes_creadas,
+    COUNT(DISTINCT d.id) AS documentos_generados
+FROM users u
+LEFT JOIN work_orders o ON o.created_by = u.id
+    AND MONTH(o.created_at) = MONTH(NOW())
+    AND YEAR(o.created_at)  = YEAR(NOW())
+LEFT JOIN documents d ON d.generated_by = u.id
+    AND MONTH(d.generated_at) = MONTH(NOW())
+    AND YEAR(d.generated_at)  = YEAR(NOW())
+WHERE u.active = 1
+GROUP BY u.id
+ORDER BY ordenes_creadas DESC;
+
+-- Puntos de calibración más seleccionados
+SELECT
+    ip.point_label AS punto,
+    cm.name        AS metodo,
+    COUNT(*)       AS veces_seleccionado
+FROM instrument_points ip
+JOIN order_instruments oi ON oi.id = ip.instrument_id
+JOIN catalog_methods  cm  ON cm.id = oi.method_id
+GROUP BY ip.point_label, cm.id
+ORDER BY veces_seleccionado DESC
+LIMIT 20;
+
+
+===============================================================
+  SECCIÓN 10 — MANTENIMIENTO Y ADMINISTRACIÓN
+===============================================================
+
+-- Crear backup de la base de datos (ejecutar en la terminal, no en Workbench)
+-- mysqldump -u root -p esv_calibraciones > backup_esv_FECHA.sql
+
+-- Verificar integridad referencial
+SELECT o.id, o.order_no
+FROM work_orders o
+LEFT JOIN clients c ON c.id = o.client_id
+WHERE c.id IS NULL;   -- debería retornar 0 filas
+
+-- Ver conexiones activas
+SHOW PROCESSLIST;
+
+-- Ver variables de configuración importantes
+SHOW VARIABLES LIKE 'max_connections';
+SHOW VARIABLES LIKE 'innodb_buffer_pool_size';
+SHOW VARIABLES LIKE 'character_set%';
+
+-- Optimizar todas las tablas
+OPTIMIZE TABLE users, catalog_methods, calibration_points,
+               clients, work_orders, order_instruments,
+               instrument_points, documents, notifications;
+
+-- Resetear secuencias de auto-increment (usar con cuidado en BD vacía)
+-- ALTER TABLE work_orders AUTO_INCREMENT = 1;
+
+-- Ver log de errores de MySQL (ejecutar en terminal)
+-- SHOW VARIABLES LIKE 'log_error';
+
+-- Crear un usuario MySQL solo para la aplicación ESV (más seguro que usar root)
+-- CREATE USER 'esv_app'@'localhost' IDENTIFIED BY 'EsvApp2026_Seguro!';
+-- GRANT ALL PRIVILEGES ON esv_calibraciones.* TO 'esv_app'@'localhost';
+-- FLUSH PRIVILEGES;
+-- (Luego actualizar DB_USER y DB_PASS en el archivo .env)
+
+-- Ver todos los usuarios MySQL del servidor
+-- SELECT user, host FROM mysql.user;
+
+===============================================================
+  FIN DEL ARCHIVO DE CONSULTAS
+  Para soporte técnico: verificar log del servidor Flask (run.py)
+  Puerto por defecto: http://127.0.0.1:5000
+===============================================================

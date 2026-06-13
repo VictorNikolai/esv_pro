@@ -1,0 +1,27 @@
+# ─── Entorno virtual ─────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ─── Variables de entorno (¡NUNCA subir al repositorio!) ─────
+.env
+
+# ─── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ─── Editores de código ───────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Sistema operativo ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
